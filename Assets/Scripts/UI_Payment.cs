@@ -6,9 +6,10 @@ using MGlobal;
 using System.Runtime.Serialization;
 using System;
 using UnityEngine.Networking;
+using Newtonsoft.Json.Linq;
 
 public class UI_Payment : MonoBehaviour{
-
+    public UI_Home home;
     public EasyTween viewPan;
     public EasyTween[] hidePan;
     [Header("------")]
@@ -23,6 +24,7 @@ public class UI_Payment : MonoBehaviour{
     public Text tx_sendAmount;
     public Text tx_sendDest;
     public Text tx_sendDebug;
+    public Button bt_Success;
 
 
     private void Awake() {
@@ -38,7 +40,7 @@ public class UI_Payment : MonoBehaviour{
         if (!assetvalue.Equals(MG.AssetValue)) {
             MG.AssetValue = assetvalue;
 
-            tx_AssetValue.text = MG.AssetValue.ToString("###,##0.#######");
+            tx_AssetValue.text = MG.AssetValue.ToString("###,##0.###");
         }
     }
 
@@ -52,12 +54,10 @@ public class UI_Payment : MonoBehaviour{
             }
         }
         send_Amount = 0m;
-        send_Dest = "";
     }
 
     public void onClick_SendCoin() {
         send_Amount = 0m;
-        send_Dest = "";
         if (decimal.TryParse(in_Amount.text, out send_Amount) ==false) {
             return;
         }
@@ -79,16 +79,26 @@ public class UI_Payment : MonoBehaviour{
 
 
     decimal send_Amount = 0m;
-    string send_Dest = "";
     public void onClick_Confirm() {
+        StartCoroutine(coWait());
         StartCoroutine(coSendCoin());
+    }
+
+    bool coWait_loop = true;
+    IEnumerator coWait() {
+        coWait_loop = true;
+        while (coWait_loop) {
+            tx_sendDebug.text += "-";
+            yield return new WaitForSeconds(0.01f);
+        }
+        Debug.Log("coWait Finish");
     }
 
 
     [DataContract]
     public class body_sendDion {
         [DataMember]
-        public string destjuso { get; set; }
+        public string sender { get; set; }
         [DataMember]
         public decimal amount { get; set; }
         [DataMember]
@@ -98,9 +108,9 @@ public class UI_Payment : MonoBehaviour{
         string url = MG.WalletURL + "sendDion";
 
         var body = WebReq.ToJsonBinary(new body_sendDion() {
-            destjuso = MG.recvAccountName,
+            sender = "user",
             amount = send_Amount,
-            memo = "Payment at the " + send_Dest
+            memo = "Payment at the " + tx_sendDest.text
         });
         var www = new UnityWebRequest(url);
         www.method = UnityWebRequest.kHttpVerbPOST;
@@ -108,20 +118,24 @@ public class UI_Payment : MonoBehaviour{
         www.uploadHandler.contentType = "application/json";
         www.downloadHandler = new DownloadHandlerBuffer();
         yield return www.SendWebRequest();
+        coWait_loop = false;
+        tx_sendDebug.text = "";
 
         if (www.isNetworkError || www.isHttpError) {
             Debug.LogError("인터넷에 연결되어있는지 확인하세요");
-            Debug.Log(www.error);
+            tx_sendDebug.text = "<color=red>" + www.error + "</color>";
         }
         else {
             if(www.responseCode == 200) {//성공
-                tx_sendDebug.text = www.downloadHandler.text;
+                var jo = JObject.Parse(www.downloadHandler.text);
+                string txID = jo["transaction_id"].Value<string>();
+                tx_sendDebug.text = "Transfer completed \nTxID = " + txID;
                 Debug.Log(tx_sendDebug.text);
-
-                // -- 각종 수자 업데이트 --
+                home.BalanceUpdate();
+                bt_Success.gameObject.SetActive(true);
             }
             else {// Fail
-
+                tx_sendDebug.text = "<color=red>" + www.error + "</color>";
             }
         }
     }

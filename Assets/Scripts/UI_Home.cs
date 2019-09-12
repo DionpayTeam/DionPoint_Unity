@@ -34,6 +34,7 @@ public class UI_Home : MonoBehaviour{
     public Text tx_CoinSymbol;
 
     [Header("Scripts")]
+    public Stock_Item[] stockItems;
     public UI_Payment scUI_Payment;
     public UI_Accumulate scUI_Accumulate;
 
@@ -48,9 +49,26 @@ public class UI_Home : MonoBehaviour{
         tx_CoinSymbol.text = MG.TokenSymbol;
 
         StartCoroutine(coDionPrice());
-        StartCoroutine(coTotalUpdate());
-        StartCoroutine(coGet_currency_balance());
+        TotalUpdate();
+        BalanceUpdate();
+
+        StartCoroutine(coGetWalletURL());
     }
+
+    IEnumerator coGetWalletURL() {
+        UnityWebRequest www = new UnityWebRequest("ftp://unity:1234qwer@dionpay.iptime.org:8282/Dev_server/DionPoint/WalletURL.txt");
+        www.downloadHandler = new DownloadHandlerBuffer();
+        yield return www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError) {
+            Debug.Log(www.error);
+        }
+        else {
+            MG.WalletURL = www.downloadHandler.text;
+            Debug.Log(MG.WalletURL);
+        }
+    }
+
 
     void Update()  {
         
@@ -74,18 +92,31 @@ public class UI_Home : MonoBehaviour{
             yield return new WaitForSeconds(15.3f);
         }
     }
+
+
+    public void TotalUpdate() {
+        StartCoroutine(coTotalUpdate());
+    }
     IEnumerator coTotalUpdate() {
         tx_StockTotal.text = "<size=40>Total</size> <b>----- <size=40>DION</size></b>";
         yield return new WaitForSeconds(0.2f);
+
+        for (int i = 0; i < stockItems.Length; i++) {
+            stockItems[i].AmountUpdate();
+        }
         int total = 0;
         for(int i = 0; i < MG.dion_Stock.Length; i++) {
             total += MG.dion_Stock[i];
         }
-        tx_StockTotal.text = "<size=40>Total</size> <b>"+ total.ToString("###,##0") +"<size=40>DION</size></b>";
+        tx_StockTotal.text = "<size=40>Total</size> <b>"+ total.ToString("###,##0") +" <size=40>DION</size></b>";
     }
 
-    
-	[DataContract]
+
+    public void BalanceUpdate() {
+        StartCoroutine(coGet_currency_balance());
+    }
+
+    [DataContract]
 	public class body_get_currency_balance {
 		[DataMember]
 		public string code { get; set; }
@@ -130,6 +161,7 @@ public class UI_Home : MonoBehaviour{
             MG.Balance = System.Convert.ToDecimal(stbal);
 
             tx_Balance.text = MG.Balance.ToString("###,##0.#######");
+            scUI_Payment.tx_Balance.text = tx_Balance.text;
         }
         scUI_Payment.enabled = true;
         scUI_Accumulate.enabled=true;

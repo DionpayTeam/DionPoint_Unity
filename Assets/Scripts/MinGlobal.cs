@@ -27,6 +27,7 @@ namespace MGlobal {
         public static decimal Balance = 0m;
 
         public static decimal AssetValue = 0m;
+        public static decimal AccumulateAmount = 0m;
 
     }
 

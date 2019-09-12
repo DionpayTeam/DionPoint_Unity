@@ -21,10 +21,14 @@ public class Stock_Item : MonoBehaviour{
         tx_DionPrice.text = "$ "+MG.dion1_Price[iNum].ToString("###,##0.###");
 
         MG.dion_Stock[iNum] = Random.Range(3000, 100000000);
-        tx_Amount.text = MG.dion_Stock[iNum].ToString("###,##0") + " <size=30>DION</size>";
+        AmountUpdate();
     }
 
     void Update()  {
         
+    }
+
+    public void AmountUpdate() {
+        tx_Amount.text = MG.dion_Stock[iNum].ToString("###,##0") + " <size=30>DION</size>";
     }
 }
