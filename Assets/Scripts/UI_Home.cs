@@ -11,6 +11,9 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 
 public class UI_Home : MonoBehaviour{
+    [Header("Unity Dev Server URL")]
+    public string UnityDevURL;
+
     [Header("Keosd Server URL")]
     public string WalletURL;
 
@@ -32,6 +35,12 @@ public class UI_Home : MonoBehaviour{
     public Text tx_StockTotal;
     public Text tx_Balance;
     public Text tx_CoinSymbol;
+    [Header("------")]
+    public EasyTween introPan;
+    public EasyTween DionLogo;
+    public EasyTween txPoint;
+    public GameObject pan_internetErr;
+
 
     [Header("Scripts")]
     public Stock_Item[] stockItems;
@@ -39,6 +48,7 @@ public class UI_Home : MonoBehaviour{
     public UI_Accumulate scUI_Accumulate;
 
     void Start()  {
+        DionLogo.OpenCloseObjectAnimation();
         MG.WalletURL = WalletURL;
         MG.EosMainNet = EosMainNet;
         MG.CoinName = CoinName;
@@ -56,18 +66,35 @@ public class UI_Home : MonoBehaviour{
     }
 
     IEnumerator coGetWalletURL() {
-        UnityWebRequest www = new UnityWebRequest("ftp://unity:1234qwer@dionpay.iptime.org:8282/Dev_server/DionPoint/WalletURL.txt");
+        UnityWebRequest www = new UnityWebRequest(UnityDevURL);
         www.downloadHandler = new DownloadHandlerBuffer();
         yield return www.SendWebRequest();
 
+        bool err = false;
         if (www.isNetworkError || www.isHttpError) {
             Debug.Log(www.error);
+            err = true;
         }
         else {
             MG.WalletURL = www.downloadHandler.text;
             Debug.Log(MG.WalletURL);
         }
+
+        yield return new WaitUntil(() => txPoint.IsObjectOpened());
+        if (err) {
+            pan_internetErr.SetActive(true);
+        }
+        else {
+            yield return new WaitForSeconds(2f);
+            introPan.OpenCloseObjectAnimation();
+        }
     }
+
+    public void onClick_ExitApp() {
+        Application.Quit();
+    }
+
+
 
 
     void Update()  {
