@@ -1528,7 +1528,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputField: {fileID: 2087000368}
   image: {fileID: 630518731}
-  icon: {fileID: 2800000, guid: 9335c747b0d174defb049108578d8dac, type: 3}
+  icon: {fileID: 2800000, guid: 0542f541b29214fc28678ee8c4c7478c, type: 3}
 --- !u!114 &740698052
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -47,6 +47,10 @@ public class UI_Home : MonoBehaviour{
     public UI_Payment scUI_Payment;
     public UI_Accumulate scUI_Accumulate;
 
+    private void Awake() {
+        introPan.gameObject.SetActive(true);
+    }
+
     void Start()  {
         DionLogo.OpenCloseObjectAnimation();
         MG.WalletURL = WalletURL;
