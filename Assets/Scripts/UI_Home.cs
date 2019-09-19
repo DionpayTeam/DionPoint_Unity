@@ -49,6 +49,12 @@ public class UI_Home : MonoBehaviour{
 
     private void Awake() {
         introPan.gameObject.SetActive(true);
+
+
+
+
+
+
     }
 
     void Start()  {
@@ -147,54 +153,48 @@ public class UI_Home : MonoBehaviour{
         StartCoroutine(coGet_currency_balance());
     }
 
-    [DataContract]
-	public class body_get_currency_balance {
-		[DataMember]
-		public string code { get; set; }
-		[DataMember]
-		public string account { get; set; }
-		[DataMember]
-		public string symbol { get; set; }
-	}
-	IEnumerator coGet_currency_balance() {
-		string url = MG.EosMainNet + "get_currency_balance";
-
-		var body = WebReq.ToJsonBinary(new body_get_currency_balance()	{
-			code = MG.CoinName,
-			account = MG.recvAccountName,
-			symbol = MG.TokenSymbol
-		});
-		var www = new UnityWebRequest(url);
-		www.method = UnityWebRequest.kHttpVerbPOST;
-		www.uploadHandler = new UploadHandlerRaw(body);
-		www.uploadHandler.contentType = "application/json";
-		www.downloadHandler = new DownloadHandlerBuffer();
-		yield return www.SendWebRequest();
-
-		if (www.isNetworkError || www.isHttpError)	{
-			Debug.LogError("인터넷에 연결되어있는지 확인하세요");
-			Debug.Log(www.error);
-		}
-        else {
-            /*
-            string jsonString = @"['116999999999.0000000 TSTDION']";
-            Debug.Log(jsonString);
-
-            List<string> bal = JsonConvert.DeserializeObject<List<string>>(jsonString);
-            Debug.Log(bal[0]);
-            string stbal = bal[0].Replace(MG.TokenSymbol, "");
-            decimal balance = System.Convert.ToDecimal(stbal);
-            Debug.Log(balance.ToString("###,##0.#######"));
-            */
-
-            List<string> bal = JsonConvert.DeserializeObject<List<string>>(www.downloadHandler.text);
-            string stbal = bal[0].Replace(MG.TokenSymbol, "");
-            MG.Balance = System.Convert.ToDecimal(stbal);
-
-            tx_Balance.text = MG.Balance.ToString("###,##0.#######");
-            scUI_Payment.tx_Balance.text = tx_Balance.text;
-        }
-        scUI_Payment.enabled = true;
-        scUI_Accumulate.enabled=true;
+    public class body_get_currency_balance {
+        public string code { get; set; }
+        public string account { get; set; }
+        public string symbol { get; set; }
     }
+
+    IEnumerator coGet_currency_balance() {
+        body_get_currency_balance body = new body_get_currency_balance { 
+            code = MG.CoinName,
+            account = MG.recvAccountName,
+            symbol = MG.TokenSymbol
+        };
+        string json = JsonConvert.SerializeObject(body);
+
+        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+
+        using (UnityWebRequest www = new UnityWebRequest(MG.EosMainNet + "get_currency_balance", UnityWebRequest.kHttpVerbPOST)) {
+            UploadHandlerRaw uH = new UploadHandlerRaw(bytes);
+            DownloadHandlerBuffer dH = new DownloadHandlerBuffer();
+
+            www.uploadHandler = uH;
+            www.downloadHandler = dH;
+            www.SetRequestHeader("Content-Type", "application/json");
+            yield return www.SendWebRequest();
+
+            if (www.isNetworkError || www.isHttpError) {
+                Debug.Log(www.error);
+                tx_Balance.text = www.error.ToString();
+            }
+            else {
+                List<string> bal = JsonConvert.DeserializeObject<List<string>>(www.downloadHandler.text);
+                string stbal = bal[0].Replace(MG.TokenSymbol, "");
+                MG.Balance = System.Convert.ToDecimal(stbal);
+
+                tx_Balance.text = MG.Balance.ToString("###,##0.#######");
+                scUI_Payment.tx_Balance.text = tx_Balance.text;
+            }
+            scUI_Payment.enabled = true;
+            scUI_Accumulate.enabled = true;
+        }
+
+    }
+
+
 }

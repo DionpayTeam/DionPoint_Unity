@@ -7,6 +7,7 @@ using MGlobal;
 using System.Runtime.Serialization;
 using UnityEngine.Networking;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 public class UI_Accumulate : MonoBehaviour{
 
@@ -117,56 +118,60 @@ public class UI_Accumulate : MonoBehaviour{
         Debug.Log("coWait Finish");
     }
 
-    [DataContract]
+
+
     public class body_sendDion {
-        [DataMember]
         public string sender { get; set; }
-        [DataMember]
         public decimal amount { get; set; }
-        [DataMember]
         public string memo { get; set; }
     }
     IEnumerator coSendCoin() {
         string url = MG.WalletURL + "sendDion";
-
-        var body = WebReq.ToJsonBinary(new body_sendDion() {
+        body_sendDion body = new body_sendDion {
             sender = "company",
             amount = MG.AccumulateAmount,
             memo = "Earn points"
-        });
-        var www = new UnityWebRequest(url);
-        www.method = UnityWebRequest.kHttpVerbPOST;
-        www.uploadHandler = new UploadHandlerRaw(body);
-        www.uploadHandler.contentType = "application/json";
-        www.downloadHandler = new DownloadHandlerBuffer();
-        yield return www.SendWebRequest();
-        coWait_loop = false;
-        tx_recvLog.text = "";
+        };
+        string json = JsonConvert.SerializeObject(body);
+        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+        using (UnityWebRequest www = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)) {
+            UploadHandlerRaw uH = new UploadHandlerRaw(bytes);
+            DownloadHandlerBuffer dH = new DownloadHandlerBuffer();
 
-        if (www.isNetworkError || www.isHttpError) {
-            Debug.LogError("인터넷에 연결되어있는지 확인하세요");
-            tx_recvLog.text = "<color=red>" + www.error + "</color>";
-            but_X.gameObject.SetActive(true);
-        }
-        else {
-            if (www.responseCode == 200) {//성공
-                var jo = JObject.Parse(www.downloadHandler.text);
-                string txID = jo["transaction_id"].Value<string>();
-                tx_recvLog.text = "Transfer completed \nTxID = " + txID;
-                Debug.Log(tx_recvLog.text);
+            www.uploadHandler = uH;
+            www.downloadHandler = dH;
+            www.SetRequestHeader("Content-Type", "application/json");
+            yield return www.SendWebRequest();
 
-                MG.dion_Stock[0] -= (int)MG.AccumulateAmount;
-                home.TotalUpdate();
-                MG.AccumulateAmount = 0m;
 
-                yield return new WaitForSeconds(0.5f);
-                home.BalanceUpdate();
-                yield return new WaitForSeconds(0.2f);
-                viewPan.OpenCloseObjectAnimation();
-            }
-            else {// Fail
+            coWait_loop = false;
+            tx_recvLog.text = "";
+
+            if (www.isNetworkError || www.isHttpError) {
+                Debug.LogError("인터넷에 연결되어있는지 확인하세요");
                 tx_recvLog.text = "<color=red>" + www.error + "</color>";
                 but_X.gameObject.SetActive(true);
+            }
+            else {
+                if (www.responseCode == 200) {//성공
+                    var jo = JObject.Parse(www.downloadHandler.text);
+                    string txID = jo["transaction_id"].Value<string>();
+                    tx_recvLog.text = "Transfer completed \nTxID = " + txID;
+                    Debug.Log(tx_recvLog.text);
+
+                    MG.dion_Stock[0] -= (int)MG.AccumulateAmount;
+                    home.TotalUpdate();
+                    MG.AccumulateAmount = 0m;
+
+                    yield return new WaitForSeconds(0.5f);
+                    home.BalanceUpdate();
+                    yield return new WaitForSeconds(0.2f);
+                    viewPan.OpenCloseObjectAnimation();
+                }
+                else {// Fail
+                    tx_recvLog.text = "<color=red>" + www.error + "</color>";
+                    but_X.gameObject.SetActive(true);
+                }
             }
         }
     }
